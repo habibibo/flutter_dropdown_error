@@ -1,0 +1,448 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter/cupertino.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:device_id/device_id.dart';
+class OneItem extends StatefulWidget {
+ //final VoidCallback signOut;
+ 
+ String value;
+ OneItem({Key key, this.value}) : super(key: key);
+ 
+ @override
+ _OneItemState createState() => _OneItemState();
+ //_Detailomset createState() => _Detailomset();
+//final geturl = 'http://kreatifproject.com/myoffice/omset/getdetailomset';
+
+}
+
+class _OneItemState extends State<OneItem> {
+final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); 
+bool toggle = true;
+var urlupdateitem = 'http://www.kreatifproject.com/bengkelapi/updateitem.php';
+String testotal;
+var _names = TextEditingController();
+TextEditingController _kategori;
+TextEditingController _qty;
+TextEditingController _satuan;
+TextEditingController _buy;
+TextEditingController _sale;
+TextEditingController _class;
+List _category =
+  ["Kategori", "Jasa", "Parts"];
+
+  List _type =
+  ["Tipe", "Motor", "Sepeda", "Lain - lain"];
+
+  List<DropdownMenuItem<String>> _dropDownMenuItems;
+  List<DropdownMenuItem<String>> _typeDropMenuItems;
+  String _currentKtg;
+  String _currentType;
+  
+  // here we are creating the list needed for the DropDownButton
+  List<DropdownMenuItem<String>> getDropDownMenuItems() {
+    List<DropdownMenuItem<String>> items = new List();
+    for (String getcategory in _category) {
+      // here we are creating the drop down menu items, you can customize the item right here
+      // but I'll just use a simple text for this
+      items.add(new DropdownMenuItem(
+          value: getcategory,
+          child: new Text(getcategory)
+      ));
+    }
+    return items;
+  }
+  
+  List<DropdownMenuItem<String>> typeDownMenuItems() {
+    List<DropdownMenuItem<String>> itemss = new List();
+    for (String gettype in _type) {
+      // here we are creating the drop down menu items, you can customize the item right here
+      // but I'll just use a simple text for this
+      itemss.add(new DropdownMenuItem(
+          value: gettype,
+          child: new Text(gettype)
+      ));
+    }
+    return itemss;
+  }
+  
+  
+  void changedDropDownItem(String selectedKtg) {
+    print("Selected city $selectedKtg, we are going to refresh the UI");
+    setState(() {
+          _currentKtg = selectedKtg;
+          
+       });
+      }
+    
+
+
+void changedTypeItem(String selectedType) {
+    print("Selected city $selectedType, we are going to refresh the UI");
+   setState(() {
+      _currentType = selectedType;
+    });
+  }
+
+  void updateitem() async{
+    
+    String deviceId = await DeviceId.getID;  
+    //final response = await http.post(urlsaveitem,
+   //  body: {"name": _names.text, "kategori": _kategori.text, "qty": _qty.text, "satuan": _satuan.text});
+   SharedPreferences prefs = await SharedPreferences.getInstance();
+       prefs.getString('prefemail');
+       //String deviceId = await DeviceId.getID;
+       final response = await http.post(urlupdateitem,
+       body: {"name": _names.text, "category": _currentKtg, "type": _currentType, "class" : _class.text,"qty": _qty.text, "buy" : _buy.text, "sale" : _sale.text, "satuan": _satuan.text, "email" : prefs.getString('prefemail'), "deviceid": deviceId});
+        final data = jsonDecode(response.body);
+      
+        String themessage = data['message'];
+        String thevalue = data['value'];
+        String thephone = data['phone'];
+        String theid = data['id'];
+    setState(() {
+      
+      if(thevalue.toString() == "a"){
+        /*
+        Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => MainMenu(myphone : thephone)),
+            );
+          */
+          showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  // return object of type Dialog
+                                  return AlertDialog(
+                                    title: new Text(""),
+                                    content: new Text(data['message'].toString()),
+                                    actions: <Widget>[
+                                      // usually buttons at the bottom of the dialog
+                                      new FlatButton(
+                                        child: new Text("Close"),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+      }else{
+        showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  // return object of type Dialog
+                                  return AlertDialog(
+                                    title: new Text(""),
+                                    content: new Text(data['message'].toString()),
+                                    actions: <Widget>[
+                                      // usually buttons at the bottom of the dialog
+                                      new FlatButton(
+                                        child: new Text("Close"),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+      }
+    });
+
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    setState(() {
+      _dropDownMenuItems = getDropDownMenuItems();
+      _currentKtg = _dropDownMenuItems[0].value;
+
+      _typeDropMenuItems = typeDownMenuItems();
+      _currentType = _typeDropMenuItems[0].value;  
+    });
+    
+    //WidgetsBinding.instance.addObserver(this);
+    //Timer.periodic(Duration(seconds: 3), (Timer t) => gettotalomset());
+    //gettotalomset();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    //var json = jsonDecode(getjsonomset().body);
+    return Scaffold(
+      backgroundColor: Colors.lightBlueAccent,
+      body: 
+      Form(
+        key: _formKey,
+        child : 
+                FutureBuilder<List<Items>>(
+                future: _fetchJobs(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    List<Items> data = snapshot.data;
+                    return _contactListView(data);
+                  } else if (snapshot.hasError) {
+                    return Text("Harap cek koneksi internet anda");
+                  } 
+                  return Center(child : CircularProgressIndicator());
+                },
+              ),
+        ),
+    );
+  }
+
+  Future<List<Items>> _fetchJobs() async {
+    //String device_id = await DeviceId.getID;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+       //prefs.getString('prefemail');
+    final geturl = 'http://kreatifproject.com/getbengkelapi/index.php/item/getoneitem';
+    final response = await http.post(geturl, body : {"id" : widget.value, "email" : prefs.getString('prefemail') });
+    final urlomset = 'http://kreatifproject.com/mynativeapi/delcontactgroup.php';
+    final responseomset = await http.post(urlomset);
+    final tesjson = json.decode(responseomset.body);
+    testotal = tesjson["nominal"].toString();
+    
+    //return testotal;
+
+    if (response.statusCode == 200) {
+      List jsonResponse = json.decode(response.body);
+      return jsonResponse.map((fillomset) => new Items.fromJson(fillomset)).toList();
+    } else {
+      throw Exception('Harap cek koneksi internet anda ...');
+    }
+  }
+
+ListView _contactListView(data) {
+    
+    return ListView.builder(
+        itemCount: data.length,
+        itemBuilder: (context, index) {
+        
+        return 
+        Container( 
+          padding: EdgeInsets.all(10),
+          child :Card(
+          child :
+          //ListTile(
+          //        subtitle: 
+                  
+                  Material(
+                  child :SingleChildScrollView(
+                  child: Container(
+                  padding: const EdgeInsets.all(15.0),
+                  child: Column(
+                    children: <Widget>[
+                      TextField(
+                          controller: _names = TextEditingController(text: data[index].name.toString()),
+                          decoration: new InputDecoration(
+                              border: InputBorder.none,
+                              labelText: "Nama",
+                              focusedBorder: OutlineInputBorder(
+                              borderRadius: new BorderRadius.circular(25.0),
+                              borderSide: BorderSide(color: Colors.lightBlueAccent, width: 2.0),
+                            ),
+                          hintText: 'Nama',
+                        ),
+                        scrollPadding: EdgeInsets.all(10),
+                      ),
+                          new DropdownButton(
+                          isDense: false,
+                          isExpanded: true,
+                          value: _currentKtg,
+                          items: _dropDownMenuItems,
+                          onChanged: changedDropDownItem,
+                        ),
+                        new DropdownButton(
+                          isExpanded: true,
+                          value: _currentType,
+                          items: _typeDropMenuItems,
+                          onChanged: changedTypeItem,
+                        ),
+                      TextField(
+                        controller: _class  = TextEditingController(text: data[index].classname),
+                        decoration: new InputDecoration(
+                          border: InputBorder.none,
+                          labelText: "Kelas / Ring",
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: new BorderRadius.circular(25.0),
+                            borderSide: BorderSide(color: Colors.lightBlueAccent, width: 2.0),
+                          ),
+                          
+                          hintText: 'Kelas / Ring',
+                       ),
+                      ),  
+                      TextField(
+                        controller: _qty = TextEditingController(text: data[index].qty),
+                        decoration: new InputDecoration(
+                          border: InputBorder.none,
+                          labelText: "Qty",
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: new BorderRadius.circular(25.0),
+                            borderSide: BorderSide(color: Colors.lightBlueAccent, width: 2.0),
+                            
+                          ),
+                          hintText: 'Qty',
+                       ),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                            WhitelistingTextInputFormatter.digitsOnly
+                        ], // Only numbers can be entered
+                      ),
+
+                      TextField(
+                        controller: _satuan = TextEditingController(text: data[index].satuan),
+                        decoration: new InputDecoration(
+                          border: InputBorder.none,
+                          labelText: "Satuan",
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: new BorderRadius.circular(25.0),
+                            borderSide: BorderSide(color: Colors.lightBlueAccent, width: 2.0),
+                          ),
+                          
+                          hintText: 'Satuan',
+                       ),
+                      ),
+                      TextField(
+                        controller: _buy = TextEditingController(text: data[index].buy),
+                        decoration: new InputDecoration(
+                          border: InputBorder.none,
+                          labelText: "Harga Beli",
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: new BorderRadius.circular(25.0),
+                            borderSide: BorderSide(color: Colors.lightBlueAccent, width: 2.0),
+                          ),
+                          hintText: 'Harga Beli',
+                       ),
+                       keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                            WhitelistingTextInputFormatter.digitsOnly
+                        ], 
+                      ),
+                      TextField(
+                        controller: _sale = TextEditingController(text: data[index].sale),
+                        decoration: new InputDecoration(
+                          border: InputBorder.none,
+                          labelText: "Harga Jual",
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: new BorderRadius.circular(25.0),
+                            borderSide: BorderSide(color: Colors.lightBlueAccent, width: 2.0),
+                          ),
+                          hintText: 'Harga Jual',
+                       ),
+                       keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                            WhitelistingTextInputFormatter.digitsOnly
+                        ], 
+                      ),
+                      
+                      MaterialButton(
+                        child: Text("Simpan"),
+                        padding: EdgeInsets.only(left: 50,right: 50),
+                        textColor: Colors.white,
+                        color: Colors.lightBlueAccent,
+                        shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                        onPressed: () {
+                          showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  // return object of type Dialog
+                                  return AlertDialog(
+                                    title: new Text(""),
+                                    content: new Text(_names.text+" - "),
+                                    actions: <Widget>[
+                                      // usually buttons at the bottom of the dialog
+                                      new FlatButton(
+                                        child: new Text("Close"),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                }
+                                );
+                          //updateitem();
+                        },
+                        
+                       
+                      )
+
+                    ],
+                  ),
+                 ),     
+                ),
+                  
+                //),
+                /*
+                              Container(
+                                padding: EdgeInsets.only(top: 10),
+                                child : Text("Kategori : "+ data[index].category+
+                                '\n' +"Tipe : "+ data[index].type+
+                                '\n'+"Qty : "+ data[index].qty+
+                                '\n'+"Harga Beli : Rp. "+data[index].buy+
+                                '\n'+"Harga Jual : Rp. "+data[index].sale,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 12,
+                                    color: Colors.black87
+                                  )
+                                ),
+                              ),
+                                */
+                ),
+          ),
+        );
+    });
+    
+}
+
+
+}
+
+class  GetTotaloOmset{
+  final String nominal;
+  GetTotaloOmset({this.nominal});
+
+  factory GetTotaloOmset.fromJson(Map<String, dynamic> json) {
+    return GetTotaloOmset(
+      nominal          : json['nominal']
+    );
+  }
+}
+
+
+class Items {
+  final String id;
+  final String name;
+  final String qty;
+  final String buy;
+  final String sale;
+  final String satuan;
+  final String category;
+  final String type;
+  final String classname;
+
+  Items({this.id, this.name, this.qty, this.buy, this.sale, this.satuan, this.category,this.type, this.classname});
+
+  factory Items.fromJson(Map<String, dynamic> json) {
+    return Items(
+      id          : json['id'],
+      name        : json['name'],
+      qty         : json['qty'],
+      buy         : json['buy'],
+      sale        : json['sale'],
+      satuan      : json['satuan'],
+      category    : json['category'],
+      type        : json['type'],
+      classname   : json['classname']
+    );
+  }
+}
